@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Festive Lights Controller</title>
+<style>
+  :root {
+    --bg1:#0b0f2a; --bg2:#1b1048; --glass:rgba(255,255,255,.07); --line:rgba(255,255,255,.14);
+    --text:#f1f0ff; --muted:#9a9cc9;
+    --c1:#ff4d6d; --c2:#ff9f1c; --c3:#ffe66d; --c4:#2ec4b6; --c5:#4cc9f0; --c6:#7b61ff; --c7:#f15bb5; --c8:#80ed99;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; min-height:100vh; font-family:"Segoe UI",system-ui,sans-serif; color:var(--text);
+         background:linear-gradient(160deg,var(--bg1),var(--bg2)); padding:0 16px 32px; }
+  body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.5;
+    background-image:radial-gradient(1.5px 1.5px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 20%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 85% 65%,#fff,transparent),
+    radial-gradient(1px 1px at 10% 70%,#fff,transparent),radial-gradient(1.5px 1.5px at 60% 50%,#fff,transparent); }
+  .wrap { position:relative; max-width:620px; margin:0 auto; }
+
+  /* hanging string of lights */
+  .string { position:relative; height:84px; margin:0 -16px; }
+  .string svg { position:absolute; inset:0; width:100%; height:100%; }
+  .bulbs { position:absolute; inset:0; display:flex; justify-content:space-around; padding:0 4%; }
+  .hb { width:16px; height:22px; border-radius:50% 50% 45% 45%; margin-top:26px; background:#2a2a50;
+        transition:.25s; position:relative; }
+  .hb:nth-child(odd){ margin-top:40px; }
+  .hb.on { background:var(--c); box-shadow:0 0 12px 4px var(--c),0 0 28px 8px var(--c); }
+
+  header { text-align:center; margin:4px 0 18px; }
+  h1 { margin:0; font-size:1.7rem; font-weight:700; letter-spacing:.02em;
+       background:linear-gradient(90deg,var(--c2),var(--c7),var(--c5)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .status { margin-top:6px; font-size:.85rem; color:var(--muted); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#ff5a5f; margin-right:6px; box-shadow:0 0 8px #ff5a5f; }
+  .dot.on { background:#4ade80; box-shadow:0 0 8px #4ade80; }
+
+  button { font:inherit; color:inherit; cursor:pointer; border:0; }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+  .panel { background:var(--glass); border:1px solid var(--line); border-radius:20px; padding:16px; margin-bottom:16px;
+           backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .panel h2 { margin:0 0 12px; font-size:.78rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+
+  .connect { width:100%; padding:14px; border-radius:16px; font-weight:600; font-size:1rem; color:#fff;
+             background:linear-gradient(90deg,var(--c6),var(--c7)); box-shadow:0 6px 24px rgba(123,97,255,.4); margin-bottom:16px; }
+  .connect.live { background:linear-gradient(90deg,#334155,#475569); box-shadow:none; }
+
+  /* relay tiles */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .tile { aspect-ratio:1; border-radius:18px; background:rgba(255,255,255,.05); border:1px solid var(--line);
+          display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; transition:.2s; }
+  .tile .lamp { width:34px; height:34px; border-radius:50%; background:#2a2a50; border:2px solid rgba(255,255,255,.15); transition:.2s; }
+  .tile span { font-size:.75rem; color:var(--muted); }
+  .tile.on { background:rgba(255,255,255,.1); border-color:var(--c); }
+  .tile.on .lamp { background:var(--c); border-color:#fff; box-shadow:0 0 14px 3px var(--c),0 0 32px 8px var(--c); }
+  .tile.on span { color:#fff; }
+  .tile:active:not(:disabled) { transform:scale(.94); }
+
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .duo button { padding:12px; border-radius:14px; background:rgba(255,255,255,.08); border:1px solid var(--line); font-weight:600; }
+  .duo button.go { background:linear-gradient(90deg,var(--c2),var(--c1)); border:0; }
+
+  /* effects */
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.07); border:1px solid var(--line); font-size:.9rem; transition:.2s; }
+  .chip.active { background:linear-gradient(90deg,var(--c5),var(--c6)); border-color:transparent; box-shadow:0 0 16px rgba(76,201,240,.5); font-weight:600; }
+  .chip.stop { background:rgba(255,77,109,.18); border-color:rgba(255,77,109,.5); }
+
+  /* speed */
+  .speedhead { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .speedhead b { font-size:1.2rem; color:var(--c3); }
+  input[type=range] { width:100%; accent-color:var(--c2); height:28px; }
+  .ends { display:flex; justify-content:space-between; font-size:.75rem; color:var(--muted); }
+
+  #log { background:rgba(0,0,0,.35); border-radius:12px; padding:10px; height:80px; overflow:auto;
+         font:11px/1.4 ui-monospace,monospace; color:#a5f3fc; white-space:pre-wrap; }
+
+  /* ---------- Laptop / desktop: landscape two-column layout ---------- */
+  @media (min-width: 900px) {
+    body { padding:0 32px 32px; }
+    .wrap { max-width:1100px; }
+    .string { margin:0 -32px; height:96px; }
+    .layout { display:grid; grid-template-columns:1.15fr 1fr; gap:18px;
+              grid-template-areas:"connect connect" "relays effects" "relays speed" "log log"; }
+    .layout .connect { grid-area:connect; margin-bottom:0; max-width:420px; justify-self:center; width:100%; }
+    .layout .panel { margin-bottom:0; }
+    .p-relays { grid-area:relays; display:flex; flex-direction:column; }
+    .p-relays .tiles { flex:1; align-content:center; }
+    .p-effects { grid-area:effects; }
+    .p-speed { grid-area:speed; }
+    #log { grid-area:log; height:110px; }
+    h1 { font-size:2.1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="string">
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0 4 Q25 22 50 8 T100 4" fill="none" stroke="#6b6f9c" stroke-width=".7" vector-effect="non-scaling-stroke"/></svg>
+    <div class="bulbs" id="hang"></div>
+  </div>
+
+  <header>
+    <h1>✨ Festive Lights Controller</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Disconnected</span></div>
+  </header>
+
+  <div class="layout">
+  <button class="connect" id="connectBtn">Connect to HC-05</button>
+
+  <section class="panel p-relays">
+    <h2>Relays</h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="duo">
+      <button id="allOn" disabled class="go">All ON</button>
+      <button id="allOff" disabled>All OFF</button>
+    </div>
+  </section>
+
+  <section class="panel p-effects">
+    <h2>Light Effects</h2>
+    <div class="chips" id="pats"></div>
+  </section>
+
+  <section class="panel p-speed">
+    <h2>Speed</h2>
+    <div class="speedhead"><span>Step time</span><b id="speedVal">300 ms</b></div>
+    <input type="range" id="speed" min="100" max="1500" step="50" value="300" disabled>
+    <div class="ends"><span>Fast</span><span>Slow</span></div>
+  </section>
+
+  <div id="log"></div>
+  </div>
+</div>
+
+<script>
+const BT_SPP_UUID = '00001101-0000-1000-8000-00805f9b34fb';
+const COLORS = ['#ff4d6d','#ff9f1c','#ffe66d','#2ec4b6','#4cc9f0','#7b61ff','#f15bb5','#80ed99'];
+const PATTERNS = [
+  ['CHASER','➡️ Chaser'], ['REVERSE','⬅️ Reverse'], ['PINGPONG','↔️ Ping-Pong'],
+  ['ALTERNATE','🔀 Alternate'], ['BLINKALL','✨ Blink All'], ['TWINKLE','🌟 Twinkle'],
+  ['FILL','📶 Fill'], ['CENTER','🎯 Center Out'], ['AUTO','🎆 Auto Mix'], ['STOP','⏹ Stop']
+];
+const $ = id => document.getElementById(id);
+let port, writer, reader, keepReading = false;
+
+// build UI
+const tiles = [], hangs = [];
+COLORS.forEach((c, i) => {
+  const h = document.createElement('div');
+  h.className = 'hb'; h.style.setProperty('--c', c);
+  $('hang').appendChild(h); hangs.push(h);
+
+  const t = document.createElement('button');
+  t.className = 'tile'; t.disabled = true; t.style.setProperty('--c', c);
+  t.innerHTML = `<div class="lamp"></div><span>Relay ${i + 1}</span>`;
+  t.addEventListener('click', () => send(`R${i + 1}:${t.classList.contains('on') ? 0 : 1}`));
+  $('tiles').appendChild(t); tiles.push(t);
+});
+const chips = {};
+PATTERNS.forEach(([key, label]) => {
+  const b = document.createElement('button');
+  b.className = 'chip' + (key === 'STOP' ? ' stop' : '');
+  b.textContent = label; b.disabled = true;
+  b.addEventListener('click', () => send('PAT:' + key));
+  $('pats').appendChild(b); chips[key] = b;
+});
+
+function log(m) { $('log').textContent += m + '\n'; $('log').scrollTop = $('log').scrollHeight; }
+
+function setConnected(c) {
+  $('dot').classList.toggle('on', c);
+  $('statusText').textContent = c ? 'Connected' : 'Disconnected';
+  $('connectBtn').textContent = c ? 'Disconnect' : 'Connect to HC-05';
+  $('connectBtn').classList.toggle('live', c);
+  tiles.forEach(t => t.disabled = !c);
+  Object.values(chips).forEach(b => b.disabled = !c);
+  $('allOn').disabled = $('allOff').disabled = $('speed').disabled = !c;
+  if (!c) { showBits('00000000'); showPattern('STOP'); }
+}
+
+function showBits(bits) {
+  tiles.forEach((t, i) => {
+    const on = bits[i] === '1';
+    t.classList.toggle('on', on);
+    hangs[i].classList.toggle('on', on);
+  });
+}
+function showPattern(p) {
+  Object.entries(chips).forEach(([k, b]) => b.classList.toggle('active', k === p && p !== 'STOP'));
+}
+
+async function send(cmd) {
+  if (!writer) return;
+  await writer.write(new TextEncoder().encode(cmd + '\n'));
+  log('→ ' + cmd);
+}
+
+function handleLine(l) {
+  if (!l) return;
+  const b = l.match(/R=([01]{8})/);  if (b) showBits(b[1]);
+  const p = l.match(/PAT=(\w+)/);    if (p) showPattern(p[1]);
+  const s = l.match(/SPD=(\d+)/);    if (s) { $('speed').value = s[1]; $('speedVal').textContent = s[1] + ' ms'; }
+  if (l.startsWith('STATUS')) log('← ' + l);
+}
+
+async function readLoop() {
+  const dec = new TextDecoder(); let buf = '';
+  while (port && port.readable && keepReading) {
+    reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value);
+        let i;
+        while ((i = buf.indexOf('\n')) >= 0) { handleLine(buf.slice(0, i).trim()); buf = buf.slice(i + 1); }
+      }
+    } catch (e) { log('Read error: ' + e.message); }
+    finally { reader.releaseLock(); }
+  }
+}
+
+async function connect() {
+  try {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    port = isAndroid
+      ? await navigator.serial.requestPort({ filters: [{ bluetoothServiceClassId: BT_SPP_UUID }] })
+      : await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    writer = port.writable.getWriter();
+    keepReading = true;
+    setConnected(true); log('Connected');
+    readLoop();
+  } catch (e) { log('Connect failed: ' + e.message); port = null; }
+}
+
+async function disconnect() {
+  keepReading = false;
+  try { if (reader) await reader.cancel(); } catch {}
+  try { if (writer) writer.releaseLock(); } catch {}
+  try { if (port) await port.close(); } catch {}
+  writer = reader = port = null;
+  setConnected(false); log('Disconnected');
+}
+
+$('connectBtn').addEventListener('click', () => port ? disconnect() : connect());
+$('allOn').addEventListener('click', () => send('ALL_ON'));
+$('allOff').addEventListener('click', () => send('ALL_OFF'));
+$('speed').addEventListener('input', e => $('speedVal').textContent = e.target.value + ' ms');
+$('speed').addEventListener('change', e => send('SPEED:' + e.target.value));
+
+if (!('serial' in navigator)) { log('Web Serial not supported. Use Chrome or Edge.'); $('connectBtn').disabled = true; }
+setConnected(false);
+</script>
+</body>
+</html>
