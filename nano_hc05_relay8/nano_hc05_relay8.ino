@@ -1,26 +1,11 @@
-/*
-  Arduino Nano + HC-05 : 8-Channel Relay Diwali Light Controller
-  Wiring:
-    HC-05 VCC -> 5V      HC-05 GND -> GND
-    HC-05 TXD -> D11     HC-05 RXD -> D12 (via 1k/2k voltage divider)
-    Relay IN1..IN8 -> D2..D9
-    Relay VCC -> 5V (use a separate 5V supply if possible), GND -> GND (common)
 
-  Commands (end with newline):
-    R1:1 .. R8:1   relay on        R1:0 .. R8:0   relay off
-    ALL_ON, ALL_OFF
-    PAT:CHASER | REVERSE | PINGPONG | ALTERNATE | BLINKALL |
-        TWINKLE | FILL | CENTER | AUTO | STOP
-    SPEED:<ms>     step time (100-2000)
-*/
 #include <SoftwareSerial.h>
 
-SoftwareSerial bt(11, 12);  // RX = D11, TX = D12
+SoftwareSerial bt(11, 12);  
 
 const int NUM = 8;
 const int PINS[NUM] = {2, 3, 4, 5, 6, 7, 8, 9};
 
-// Most relay modules are ACTIVE LOW. Set to false if yours is the opposite.
 const bool ACTIVE_LOW = true;
 
 enum Pattern { P_NONE, P_CHASER, P_REVERSE, P_PINGPONG, P_ALTERNATE,
@@ -30,7 +15,7 @@ const char* NAMES[] = {"STOP", "CHASER", "REVERSE", "PINGPONG", "ALTERNATE",
 
 bool state[NUM];
 Pattern pattern = P_NONE;
-unsigned long stepMs = 300;   // keep >= 100 ms to protect relay contacts
+unsigned long stepMs = 300;   
 unsigned long lastStep = 0;
 unsigned int stepNo = 0;
 String line = "";
@@ -57,7 +42,7 @@ void sendStatus() {
   bt.print(",SPD=");      bt.println(stepMs);
 }
 
-void sendBits() {  // short update used while a pattern runs
+void sendBits() { 
   bt.print("R="); bt.println(bits());
 }
 
@@ -95,7 +80,6 @@ void frame(Pattern p, unsigned int s) {
 
 void runStep() {
   if (pattern == P_AUTO) {
-    // cycle through all patterns, 24 steps each
     Pattern sub = (Pattern)(1 + (stepNo / 24) % 8);
     frame(sub, stepNo);
   } else {
@@ -118,7 +102,7 @@ void handleCommand(String cmd) {
 
   if (cmd.length() == 4 && cmd[0] == 'R' && cmd[2] == ':' &&
       cmd[1] >= '1' && cmd[1] <= '8') {
-    pattern = P_NONE;                       // manual control stops patterns
+    pattern = P_NONE;                  
     setRelay(cmd[1] - '1', cmd[3] == '1');
   } else if (cmd == "ALL_ON") {
     pattern = P_NONE; setAll(true);
@@ -141,7 +125,7 @@ void handleCommand(String cmd) {
 
 void setup() {
   for (int i = 0; i < NUM; i++) {
-    digitalWrite(PINS[i], ACTIVE_LOW ? HIGH : LOW);  // OFF before output mode
+    digitalWrite(PINS[i], ACTIVE_LOW ? HIGH : LOW);  
     pinMode(PINS[i], OUTPUT);
     state[i] = false;
   }
