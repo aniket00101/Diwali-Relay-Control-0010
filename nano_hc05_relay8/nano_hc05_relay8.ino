@@ -6,7 +6,6 @@ const int NUM = 8;
 const int PINS[NUM] = {2, 3, 4, 5, 6, 7, 8, 9};
 const bool ACTIVE_LOW = true;
 
-// STOP..AUTO keep their old order; 5 new patterns added at the end
 enum Pattern { P_NONE, P_CHASER, P_REVERSE, P_PINGPONG, P_ALTERNATE,
                P_BLINKALL, P_TWINKLE, P_FILL, P_CENTER, P_AUTO,
                P_COMET, P_SPARKLE, P_WAVE, P_HEARTBEAT, P_DIYA,
@@ -15,7 +14,7 @@ const char* NAMES[] = {"STOP", "CHASER", "REVERSE", "PINGPONG", "ALTERNATE",
                        "BLINKALL", "TWINKLE", "FILL", "CENTER", "AUTO",
                        "COMET", "SPARKLE", "WAVE", "HEARTBEAT", "DIYA",
                        "SCAN2", "BOUNCE2", "INWARD", "PAIRS", "TRIPLE", "QUAD", "FILLR", "DRAIN", "FILLDRAIN", "RANDOM", "STROBE", "HALVES", "BINARY", "KNIGHT", "SPLIT", "BLOCKS", "RANDOM1", "RAIN", "SPREAD", "MARCH"};
-// AUTO cycles through every pattern except STOP/AUTO, 24 steps each
+
 Pattern autoPick(unsigned int s) {
   int k = (s / 24) % (P_COUNT - 2);
   return (Pattern)(k + 1 < P_AUTO ? k + 1 : k + 2);
@@ -82,23 +81,23 @@ void frame(Pattern p, unsigned int s) {
       else for (int i = 0; i < NUM; i++) setRelay(i, i >= 3 - n && i <= 4 + n);
       break;
     }
-    case P_COMET: {                       // head with a 3-relay tail
+    case P_COMET: {                       
       int h = s % (NUM + 3);
       for (int i = 0; i < NUM; i++) setRelay(i, i <= h && i > h - 3);
       break;
     }
-    case P_SPARKLE:                       // 3 random flashes each step
+    case P_SPARKLE:                      
       setAll(false);
       for (int k = 0; k < 3; k++) setRelay(random(NUM), true);
       break;
-    case P_WAVE: {                        // pair of lights sweeping back & forth
+    case P_WAVE: {                       
       int x = s % 12; if (x > 6) x = 12 - x;
       for (int i = 0; i < NUM; i++) setRelay(i, i == x || i == x + 1);
       break;
     }
-    case P_HEARTBEAT:                     // lub-dub... pause
+    case P_HEARTBEAT:                 
       setAll((s % 6) == 0 || (s % 6) == 2); break;
-    case P_DIYA:                          // steady centre, flickering edges
+    case P_DIYA:                      
       for (int i = 0; i < NUM; i++)
         setRelay(i, (i >= 2 && i <= 5) || random(100) < 65);
       break;
@@ -152,7 +151,7 @@ void handleCommand(String cmd) {
     pattern = P_NONE; setAll(true);
   } else if (cmd == "ALL_OFF") {
     pattern = P_NONE; setAll(false);
-  } else if (cmd.startsWith("MASK:") && cmd.length() == 5 + NUM) {   // NEW: MASK:10100110
+  } else if (cmd.startsWith("MASK:") && cmd.length() == 5 + NUM) {   
     pattern = P_NONE;
     for (int i = 0; i < NUM; i++) setRelay(i, cmd[5 + i] == '1');
   } else if (cmd.startsWith("PAT:")) {
@@ -164,7 +163,7 @@ void handleCommand(String cmd) {
     if (!found) return;
   } else if (cmd.startsWith("SPEED:")) {
     stepMs = constrain(cmd.substring(6).toInt(), 100, 2000);
-  } else if (cmd == "STATUS") {                                      // NEW: just report
+  } else if (cmd == "STATUS") {                                    
   } else {
     return;
   }
